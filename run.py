@@ -50,7 +50,7 @@ def main(argv):
         output = source.split('_')[0]
         command = (
             'gcc -Wall -o dpc2sim_' + output +
-            ' example_prefetchers/ip_stride_prefetcher.c lib/dpc2sim.a'
+            ' example_prefetchers/'+ source + ' lib/dpc2sim.a'
             )
         print command
         os.system(command)

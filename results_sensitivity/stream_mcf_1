@@ -1,0 +1,19 @@
+
+*** Data Prefetching Championship 2 Simulator ***
+
+Warmup Instructions: 10000000
+Simulation Instructions: 100000000
+Scramble loads OFF
+Using 1MB Last Level Cache
+Using 12.8 GB/s DRAM bandwidth
+Streaming Prefetcher
+Knobs visible from prefetcher: 0 0 0
+Instructions Retired: 100004 Cycle: 276206 Hearbeat IPC: 0.362063 Cumulative IPC: 0.362063
+Instructions Retired: 200000 Cycle: 653403 Hearbeat IPC: 0.265103 Cumulative IPC: 0.306090
+Instructions Retired: 300001 Cycle: 1085048 Hearbeat IPC: 0.231674 Cumulative IPC: 0.276486
+Instructions Retired: 400002 Cycle: 1320844 Hearbeat IPC: 0.424100 Cumulative IPC: 0.302838
+Instructions Retired: 500005 Cycle: 1699821 Hearbeat IPC: 0.263876 Cumulative IPC: 0.294152
+Instructions Retired: 600003 Cycle: 1987177 Hearbeat IPC: 0.347993 Cumulative IPC: 0.301937
+Instructions Retired: 700001 Cycle: 2227230 Hearbeat IPC: 0.416566 Cumulative IPC: 0.314292
+Instructions Retired: 800004 Cycle: 2503321 Hearbeat IPC: 0.362210 Cumulative IPC: 0.319577
+Instructions Retired: 900002 Cycle: 2934245 Hearbeat IPC: 0.232055 Cumulative IPC: 0.306724
