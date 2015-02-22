@@ -13,6 +13,9 @@ def sanity_check(args):
     if not args.exe:
         print "ERROR: Define executables with -e option"
         exit(0)
+	if not args.degree:
+		print "ERROR: Define degree"
+		exit(0)
 
     return
 
@@ -25,6 +28,7 @@ def process_options():
     parser.add_argument("-o", "--outputDir", help="Root directory for result files", default="results")
     parser.add_argument("-e", "--exe", action='append', nargs='*', help="Executables to run")
     parser.add_argument("-s", "--submit",  help="Submit Jobs to qsub", action="store_true", default=False)
+    parser.add_argument("-d", "--degree", help="Degree of Prefetcher, for name generation", default=0)
 
     return parser
 
@@ -49,7 +53,7 @@ def main(argv):
 
     for dpc in args.exe[0]:
         for trace in traces:
-            output_filename = "{}_{}".format(dpc.split('_')[1], trace.split('_')[0])
+            output_filename = "{}_{}_{}".format(dpc.split('_')[1], trace.split('_')[0], args.degree)
             command = "zcat " + os.path.join(trace_dir, trace) + " | " + os.path.join(current_dir, dpc) + dpc_options + " | tee " + os.path.join (current_dir, args.outputDir ,output_filename)
             if args.dryRun:
                 print command
