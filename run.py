@@ -42,30 +42,47 @@ def main(argv):
     sanity_check(args)
     
     current_dir = os.getcwd()
-    trace_dir = os.path.join(current_dir, 'traces' )
 
+    #compile files
+    source_dir = os.path.join(current_dir, 'example_prefetchers')
+    sources = os.listdir (source_dir)
+    for source in sources:
+        output = source.split('_')[0]
+        command = (
+            'gcc -Wall -o dpc2sim_' + output +
+            ' example_prefetchers/ip_stride_prefetcher.c lib/dpc2sim.a'
+            )
+        print command
+        os.system(command)
+
+    #make results dir if not exist
     if not os.path.exists(args.outputDir):
         os.makedirs(args.outputDir)    
 
+    #find traces
+    trace_dir = os.path.join(current_dir, 'traces' )
     traces = os.listdir (trace_dir)
 
+    #dpc options - currently nothing
     dpc_options = ""    
 
     for dpc in args.exe[0]:
         for trace in traces:
             output_filename = "{}_{}_{}".format(dpc.split('_')[1], trace.split('_')[0], args.degree)
-            command = "zcat " + os.path.join(trace_dir, trace) + " | " + os.path.join(current_dir, dpc) + dpc_options + " | tee " + os.path.join (current_dir, args.outputDir ,output_filename)
+            command = ( 
+                "zcat " + os.path.join(trace_dir, trace) + " | " + 
+                os.path.join(current_dir, dpc) + dpc_options + " | tee " + 
+                os.path.join (current_dir, args.outputDir ,output_filename)
+                )
             if args.dryRun:
                 print command
             else:
+                #submitting to qsub
                 if args.submit:
                     exit()
+                #run on current machine
                 else:
                     os.system(command)
-
-
-
-
 
 
 #########################################################################################
