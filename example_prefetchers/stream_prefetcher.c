@@ -17,7 +17,7 @@
 
 #define STREAM_DETECTOR_COUNT 64
 #define STREAM_WINDOW 16
-#define PREFETCH_DEGREE 5
+#define PREFETCH_DEGREE 8
 
 typedef struct stream_detector
 {

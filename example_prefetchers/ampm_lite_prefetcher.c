@@ -17,7 +17,7 @@
 #include "../inc/prefetcher.h"
 
 #define AMPM_PAGE_COUNT 64
-#define PREFETCH_DEGREE 2
+#define PREFETCH_DEGREE 3
 
 typedef struct ampm_page
 {
