@@ -17,7 +17,7 @@
 
 #define STREAM_DETECTOR_COUNT 64
 #define STREAM_WINDOW 16
-#define PREFETCH_DEGREE 8
+#define PREFETCH_DEGREE 2
 
 typedef struct stream_detector
 {
@@ -164,4 +164,10 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 	    }
 	}
     }
+}
+
+void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, int prefetch, unsigned long long int evicted_addr)
+{
+  // uncomment this line to see the information available to you when there is a cache fill event
+  //printf("0x%llx %d %d %d 0x%llx\n", addr, set, way, prefetch, evicted_addr);
 }
