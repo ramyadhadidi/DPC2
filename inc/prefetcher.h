@@ -62,10 +62,14 @@ int l2_prefetch_line(int cpu_num, unsigned long long int base_addr, unsigned lon
 #define L2_ASSOCIATIVITY 8
 
 // Returns which set in the L2 this line is found
+// This function must not be used to gain oracular knowledge of the contents of the L2 cache.
+// Championship judges will scrutinize the use of this function in the code.
 int l2_get_set(unsigned long long int addr);
 
 // Returns which way in its set (see l2_get_set()) this line is found.
 // Returns -1 if the line is not found in that set
+// This function must not be used to gain oracular knowledge of the contents of the L2 cache.
+// Championship judges will scrutinize the use of this function in the code.
 int l2_get_way(int cpu_num, unsigned long long int addr, int set);
 
 /*
