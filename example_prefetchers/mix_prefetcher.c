@@ -34,9 +34,9 @@
 //**********************************************************************
 // Sandbox
 #define TOTAL_SANDBOX	2
-#define SANDBOX_SIZE_EACH 256
 #define FALSE_POSITIVE 10 			// from 1000-11==1.1%
 #define SANDBOX_PERIOD 256			// Period in L2 Accesses
+#define SANDBOX_SIZE_EACH 256
 
 // IP stride
 #define IP_TRACKER_COUNT 1024
@@ -63,25 +63,25 @@ typedef struct sandbox
 } sandbox_t;
 
 // Insert a data to sandbox | return 1:success, 0:failure
-int sandbox_insert (sandbox_t sandbox, unsigned long long int addr) {
-	int size = ++sandbox.size;
+int sandbox_insert (sandbox_t *sandbox, unsigned long long int addr) {
+	(*sandbox).data[(*sandbox).size] = addr;
 
-	if (size == sandbox.max_size)
+	int size = ++((*sandbox).size);
+	if (size == (*sandbox).max_size)
 		return 0;
 
-	sandbox.data[size] = addr;
 	return 1;
 }
 
 // Test if a data is in sandbox or not | return 1:found, 0:not found
 // Flase positive is also implemented
-int sandbox_test (sandbox_t sandbox, unsigned long long int addr) {
-	int size = sandbox.size;
+int sandbox_test (sandbox_t* sandbox, unsigned long long int addr) {
+	int size = (*sandbox).size;
 	int index_data = -1;
 
 	int i;
 	for (i=0; i<size; i++) {
-		if (sandbox.data[i] == addr) {
+		if ((*sandbox).data[i] == addr) {
 			index_data = i;
 			break;
 		}
@@ -90,15 +90,15 @@ int sandbox_test (sandbox_t sandbox, unsigned long long int addr) {
 	if (index_data == -1)
 		return 0;
 
-	if (rand() % 1000 > sandbox.false_positive)
+	if (rand() % 1000 > (*sandbox).false_positive)
 		return 1;
 	else
 		return 0;
 }
 
 // Resets a sandbox
-void sandbox_reset (sandbox_t sandbox) {
-	sandbox.size = 0;
+void sandbox_reset (sandbox_t* sandbox) {
+	(*sandbox).size = 0;
 }
 
 // ---------------------------------------------------------------------
@@ -121,9 +121,9 @@ typedef struct ip_tracker
 // Global Data
 //**********************************************************************
 
-// Sandboxs
-sandbox_t sandboxs[TOTAL_SANDBOX];
-int sandbox_scores[TOTAL_SANDBOX]
+// sandboxes
+sandbox_t sandboxes[TOTAL_SANDBOX];
+int sandbox_scores[TOTAL_SANDBOX];
 int sandbox_period_count;
 int active_pref_num;
 
@@ -133,9 +133,9 @@ ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
 //**********************************************************************
 // Instantiates
 //**********************************************************************
-void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int evaluation);
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, int evaluation);
 void l2_prefetcher_initialize_ip_stride();
-void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int evaluation);
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t* sandbox, int evaluation);
 
 //**********************************************************************
 // Main Functions
@@ -148,44 +148,136 @@ void l2_prefetcher_initialize(int cpu_num)
   
   printf("Knobs visible from prefetcher: %d %d %d\n", knob_scramble_loads, knob_small_llc, knob_low_bandwidth);
 
-  // Sandboxs
+  //** sandboxes
   int i;
   for (i=0; i<TOTAL_SANDBOX; i++) {
-  	sandboxs[i].size = 0;
-  	sandboxs[i].max_size = SANDBOX_SIZE_EACH;
-  	sandboxs[i].false_positive = FALSE_POSITIVE;
+  	sandboxes[i].size = 0;
+  	sandboxes[i].false_positive = FALSE_POSITIVE;
 
   	sandbox_scores[i] = 0;
+  	// Each sandbox for a prefetcher max_size is different
+  	// based on their degree
+  	// +1 because of last cycle
+  	switch (i){
+  		// Next Line
+  		case 0:	  	
+		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH + 1;
+		  	break;
+
+		  // IP Stride
+		  case 1:
+		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * IP_PREFETCH_DEGREE + 1;
+		  	break;
+  	}
   }
 
 
   sandbox_period_count = 0;
 
-  	// Choose the first prefetcher as active one
+  // Choose the first prefetcher as active one
   active_pref_num = 0;
 
-  // IP stride
+  //** IP stride
 	l2_prefetcher_initialize_ip_stride();
 }
 
-// This function is called once for each Mid Level Cache read, and is the entry point for participants' prefetching algorithms
+// ---------------------------------------------------------------------
+// This function is called once for each Mid Level Cache read, 
+// and is the entry point for participants' prefetching algorithms
 void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned long long int ip, int cache_hit)
 {
-	// Operate Avtive Prefetcher
+	//** Operate Avtive Prefetcher
+	switch (active_pref_num) {
+		// Next Line
+		case 0:
+			l2_prefetcher_next_line(addr, &sandboxes[0], 0);
+			break;
 
-	// Increase Evaluation Period
-	// If period is done decide next active prefetcher - reset scores - reset sandboxs 
+		// IP Stride
+		case 1:
+			l2_prefetcher_initialize_ip_stride(addr, &sandboxes[1], 0);
+			break;
 
-	// Check for Hits in Sandboxes
+		default:
+			printf("Error Active Prefetcher Number is not listed\n");
+			exit(1);
+	}
 
-	// Operate Sandboxes Prefetchers
-  
+	//** Increase Evaluation Period
+	// If period is done decide next active prefetcher - reset scores & sandboxes - reset period
+	sandbox_period_count++;
+	if (sandbox_period_count == SANDBOX_PERIOD) {
+		// decide next active prefetcher
+		int i;
+		int max_score = -1;
+		int index_max = -1;
+		for (i=0; i<TOTAL_SANDBOX; i++) {
+			printf("\tscore %d = %d\n", i, sandbox_scores[i]);
+			if (sandbox_scores[i] > max_score) {
+				index_max = i;
+				max_score = sandbox_scores[i];
+			}
+		}
+
+		active_pref_num = index_max;
+
+		printf("\tactive prefetcher = %d\n", active_pref_num);
+
+		/*
+		for (i=0; i<TOTAL_SANDBOX; i++) {
+			printf("\tData %d\n:",i);
+			int j;
+			for (j=0; j<sandboxes[i].size; j++) 
+				printf("\t %d:",(int)sandboxes[i].data[j]);
+			printf("\n");
+		}		
+		printf("\n");
+		*/
+		
+
+		// reset scores & sandbox
+		for (i=0; i<TOTAL_SANDBOX; i++) {
+	  	sandboxes[i].size = 0;
+	  	sandboxes[i].false_positive = FALSE_POSITIVE;
+
+	  	sandbox_scores[i] = 0;
+	  	// Each sandbox for a prefetcher max_size is different
+	  	// based on their degree
+	  	// +1 because of last cycle
+	  	switch (i){
+	  		// Next Line
+	  		case 0:	  	
+			  	sandboxes[i].max_size = SANDBOX_SIZE_EACH + 1;
+			  	break;
+
+			  // IP Stride
+			  case 1:
+			  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * IP_PREFETCH_DEGREE + 1;
+			  	break;
+	  	}
+  	}
+
+  	// reset period counter
+  	sandbox_period_count = 0;
+	}
+
+	//** Check for Hits in Sandboxes
+	int i;
+	for (i=0; i<TOTAL_SANDBOX; i++) {
+		if (sandbox_test(&sandboxes[i], addr))
+			sandbox_scores[i]++;
+	}
+
+	//** Operate Sandboxes Prefetchers
+  l2_prefetcher_next_line(addr, &sandboxes[0], 1);
+  l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+
 }
 
 // This function is called when a cache block is filled into the L2, and lets you konw which set and way of the cache the block occupies.
 void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, int prefetch, unsigned long long int evicted_addr)
 {
-  
+	// nothing 
 }
 
 
@@ -198,16 +290,17 @@ void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, i
 	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
 	sandbox_insert 1 = in evaluation
 */
-void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int evaluation)
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, int evaluation)
 {
 	// next line prefetcher
 	// since addr is a byte address, we >>6 to get the cache line address, +1, and then <<6 it back to a byte address
 	// l2_prefetch_line is expecting byte addresses
 	unsigned long long int pref_addr = ((addr>>6)+1)<<6;
-	if (!sandbox_insert (sandbox, pref_addr)) {
-		printf("Error Next Line Insert - Sandbox Full\n");
-		exit(1);
-	}
+	if (evaluation)
+		if (!sandbox_insert (sandbox, pref_addr)) {
+			printf("Error Next Line Insert - Sandbox Full\n");
+			exit(1);
+		}
 	if (!evaluation)
 		l2_prefetch_line(0, addr, pref_addr, FILL_L2);
 
@@ -240,7 +333,7 @@ void l2_prefetcher_initialize_ip_stride()
 	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
 	sandbox_insert 1 = in evaluation
 */
-void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int evaluation)
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t *sandbox, int evaluation)
 {
   // check trackers for a hit
   int tracker_index = -1;
@@ -302,23 +395,25 @@ void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int
 		for(i=0; i<IP_PREFETCH_DEGREE; i++) {
 			unsigned long long int pf_address = addr + (stride*(i+1));
 
-	  // only issue a prefetch if the prefetch address is in the same 4 KB page 
-	  // as the current demand access address
-	  if((pf_address>>12) != (addr>>12))
-			break;
+		  // only issue a prefetch if the prefetch address is in the same 4 KB page 
+		  // as the current demand access address
+		  if((pf_address>>12) != (addr>>12))
+				break;
 
-	  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
-	  if (!sandbox_insert (sandbox, pf_address)) {
-			printf("Error IP Dtride Insert - Sandbox Full\n");
-			exit(1);
+		  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
+		  if (evaluation) {
+			  if (!sandbox_insert (sandbox, pf_address)) {
+					printf("Error IP Stride Insert - Sandbox Full\n");
+					exit(1);
+				}
+			}
+		  if (!evaluation) {
+			  if(get_l2_mshr_occupancy(0) < 8)
+			      l2_prefetch_line(0, addr, pf_address, FILL_L2);
+			  else
+			      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
+			}
 		}
-	  if (!evaluation) {
-		  if(get_l2_mshr_occupancy(0) < 8)
-		      l2_prefetch_line(0, addr, pf_address, FILL_L2);
-		  else
-		      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
-		}
-	}
 	}
 
 	// update tracker
