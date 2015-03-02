@@ -26,25 +26,81 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "../inc/prefetcher.h"
 
 //**********************************************************************
 // Defines
 //**********************************************************************
+// Sandbox
+#define TOTAL_SANDBOX	2
+#define SANDBOX_SIZE_EACH 256
+#define FALSE_POSITIVE 10 			// from 1000-11==1.1%
 
 // IP stride
 #define IP_TRACKER_COUNT 1024
 #define IP_PREFETCH_DEGREE 3
 
-//**********************************************************************
-// Instantiates
-//**********************************************************************
-void l2_prefetcher_next_line(unsigned long long int addr);
 
 //**********************************************************************
-// Structs
+// Structs & Their utulities
 //**********************************************************************
 
+// Sandbox
+typedef struct sandbox
+{
+	// Data
+	unsigned long long int data[SANDBOX_SIZE_EACH];
+
+	// Size
+	int size;
+	int max_size;
+
+	// False Positive of sandbox
+	int false_positive;
+
+} sandbox_t;
+
+// Insert a data to sandbox | return 1:success, 0:failure
+int sandbox_insert (sandbox_t sandbox, unsigned long long int addr) {
+	int size = ++sandbox.size;
+
+	if (size == sandbox.max_size)
+		return 0;
+
+	sandbox.data[size] = addr;
+	return 1;
+}
+
+// Test if a data is in sandbox or not | return 1:found, 0:not found
+// Flase positive is also implemented
+int sandbox_test (sandbox_t sandbox, unsigned long long int addr) {
+	int size = sandbox.size;
+	int index_data = -1;
+
+	int i;
+	for (i=0; i<size; i++) {
+		if (sandbox.data[i] == addr) {
+			index_data = i;
+			break;
+		}
+	}
+
+	if (index_data == -1)
+		return 0;
+
+	if (rand() % 1000 > sandbox.false_positive)
+		return 1;
+	else
+		return 0;
+}
+
+// Resets a sandbox
+void sandbox_reset (sandbox_t sandbox) {
+	sandbox.size = 0;
+}
+
+// ---------------------------------------------------------------------
 // IP stride
 typedef struct ip_tracker
 {
@@ -61,6 +117,23 @@ typedef struct ip_tracker
 } ip_tracker_t;
 
 //**********************************************************************
+// Global Data
+//**********************************************************************
+
+// Sandboxs
+sandbox_t sandboxs[TOTAL_SANDBOX];
+
+// IP stride
+ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
+
+//**********************************************************************
+// Instantiates
+//**********************************************************************
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int sandbox_insert);
+void l2_prefetcher_initialize_ip_stride();
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int sandbox_insert);
+
+//**********************************************************************
 // Main Functions
 //**********************************************************************
 
@@ -70,6 +143,17 @@ void l2_prefetcher_initialize(int cpu_num)
   printf("Mix Prefetcher\n");
   
   printf("Knobs visible from prefetcher: %d %d %d\n", knob_scramble_loads, knob_small_llc, knob_low_bandwidth);
+
+  // Sandboxs
+  int i;
+  for (i=0; i<TOTAL_SANDBOX; i++) {
+  	sandboxs[i].size = 0;
+  	sandboxs[i].max_size = SANDBOX_SIZE_EACH;
+  	sandboxs[i].false_positive = FALSE_POSITIVE;
+  }
+
+  // IP stride
+	l2_prefetcher_initialize_ip_stride();
 }
 
 // This function is called once for each Mid Level Cache read, and is the entry point for participants' prefetching algorithms
@@ -91,8 +175,10 @@ void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, i
 /*
 	For each input address addr, the next cache line is prefetched, to 
 	be filled into the L2.
+	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
+	sandbox_insert 1 = in evaluation
 */
-void l2_prefetcher_next_line(unsigned long long int addr)
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int sandbox_insert)
 {
 	// next line prefetcher
 	// since addr is a byte address, we >>6 to get the cache line address, +1, and then <<6 it back to a byte address
@@ -110,3 +196,100 @@ void l2_prefetcher_next_line(unsigned long long int addr)
 
   Prefetches are issued into the L2 or LLC depending on L2 MSHR occupancy.
 */
+
+void l2_prefetcher_initialize_ip_stride() 
+{
+	int i;
+	for(i=0; i<IP_TRACKER_COUNT; i++)
+	  {
+	    trackers_ip[i].ip = 0;
+	    trackers_ip[i].last_addr = 0;
+	    trackers_ip[i].last_stride = 0;
+	    trackers_ip[i].lru_cycle = 0;
+	  }
+}
+
+/*
+	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
+	sandbox_insert 1 = in evaluation
+*/
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int sandbox_insert)
+{
+  // check trackers for a hit
+  int tracker_index = -1;
+
+  int i;
+  for(i=0; i<IP_TRACKER_COUNT; i++) {
+  	if(trackers_ip[i].ip == ip) {
+	  	trackers_ip[i].lru_cycle = get_current_cycle(0);
+	  	tracker_index = i;
+	  break;
+		}
+	}
+
+	// this is a new IP that doesn't have a tracker yet, so allocate one
+  if(tracker_index == -1) {
+  	// Search for oldest one (LRU)
+		int lru_index=0;
+		unsigned long long int lru_cycle = trackers_ip[lru_index].lru_cycle;
+		int i;
+		for(i=0; i<IP_TRACKER_COUNT; i++) {
+	  	if(trackers_ip[i].lru_cycle < lru_cycle) {
+	      lru_index = i;
+	      lru_cycle = trackers_ip[lru_index].lru_cycle;
+	    }
+		}
+
+    tracker_index = lru_index;
+
+		// reset the old tracker
+		trackers_ip[tracker_index].ip = ip;
+		trackers_ip[tracker_index].last_addr = addr;
+		trackers_ip[tracker_index].last_stride = 0;
+		trackers_ip[tracker_index].lru_cycle = get_current_cycle(0);
+
+		return;
+	}
+
+	// A hit in Trackers:
+  // calculate the stride between the current address and the last address
+  // this bit appears overly complicated because we're calculating
+  // differences between unsigned address variables
+  long long int stride = 0;
+  if(addr > trackers_ip[tracker_index].last_addr) {
+		stride = addr - trackers_ip[tracker_index].last_addr;
+	}
+  else {
+		stride = trackers_ip[tracker_index].last_addr - addr;
+		stride *= -1;
+	}
+
+  // don't do anything if we somehow saw the same address twice in a row
+  if(stride == 0)
+		return;
+
+  // only do any prefetching if there's a pattern of seeing the same
+  // stride more than once
+  if(stride == trackers_ip[tracker_index].last_stride) {
+		int i;
+		for(i=0; i<IP_PREFETCH_DEGREE; i++) {
+			unsigned long long int pf_address = addr + (stride*(i+1));
+
+	  // only issue a prefetch if the prefetch address is in the same 4 KB page 
+	  // as the current demand access address
+	  if((pf_address>>12) != (addr>>12))
+			break;
+
+	  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
+	  if(get_l2_mshr_occupancy(0) < 8)
+	      l2_prefetch_line(0, addr, pf_address, FILL_L2);
+	  else
+	      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
+	  
+		}
+	}
+
+	// update tracker
+  trackers_ip[tracker_index].last_addr = addr;
+  trackers_ip[tracker_index].last_stride = stride;
+}
