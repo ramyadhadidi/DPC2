@@ -36,6 +36,7 @@
 #define TOTAL_SANDBOX	2
 #define SANDBOX_SIZE_EACH 256
 #define FALSE_POSITIVE 10 			// from 1000-11==1.1%
+#define SANDBOX_PERIOD 256			// Period in L2 Accesses
 
 // IP stride
 #define IP_TRACKER_COUNT 1024
@@ -122,6 +123,9 @@ typedef struct ip_tracker
 
 // Sandboxs
 sandbox_t sandboxs[TOTAL_SANDBOX];
+int sandbox_scores[TOTAL_SANDBOX]
+int sandbox_period_count;
+int active_pref_num;
 
 // IP stride
 ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
@@ -129,9 +133,9 @@ ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
 //**********************************************************************
 // Instantiates
 //**********************************************************************
-void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int sandbox_insert);
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int evaluation);
 void l2_prefetcher_initialize_ip_stride();
-void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int sandbox_insert);
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int evaluation);
 
 //**********************************************************************
 // Main Functions
@@ -150,7 +154,15 @@ void l2_prefetcher_initialize(int cpu_num)
   	sandboxs[i].size = 0;
   	sandboxs[i].max_size = SANDBOX_SIZE_EACH;
   	sandboxs[i].false_positive = FALSE_POSITIVE;
+
+  	sandbox_scores[i] = 0;
   }
+
+
+  sandbox_period_count = 0;
+
+  	// Choose the first prefetcher as active one
+  active_pref_num = 0;
 
   // IP stride
 	l2_prefetcher_initialize_ip_stride();
@@ -159,6 +171,14 @@ void l2_prefetcher_initialize(int cpu_num)
 // This function is called once for each Mid Level Cache read, and is the entry point for participants' prefetching algorithms
 void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned long long int ip, int cache_hit)
 {
+	// Operate Avtive Prefetcher
+
+	// Increase Evaluation Period
+	// If period is done decide next active prefetcher - reset scores - reset sandboxs 
+
+	// Check for Hits in Sandboxes
+
+	// Operate Sandboxes Prefetchers
   
 }
 
@@ -178,12 +198,19 @@ void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, i
 	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
 	sandbox_insert 1 = in evaluation
 */
-void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int sandbox_insert)
+void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t sandbox, int evaluation)
 {
 	// next line prefetcher
 	// since addr is a byte address, we >>6 to get the cache line address, +1, and then <<6 it back to a byte address
 	// l2_prefetch_line is expecting byte addresses
-	l2_prefetch_line(0, addr, ((addr>>6)+1)<<6, FILL_L2);
+	unsigned long long int pref_addr = ((addr>>6)+1)<<6;
+	if (!sandbox_insert (sandbox, pref_addr)) {
+		printf("Error Next Line Insert - Sandbox Full\n");
+		exit(1);
+	}
+	if (!evaluation)
+		l2_prefetch_line(0, addr, pref_addr, FILL_L2);
+
 }
 
 //**********************************************************************
@@ -213,7 +240,7 @@ void l2_prefetcher_initialize_ip_stride()
 	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
 	sandbox_insert 1 = in evaluation
 */
-void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int sandbox_insert)
+void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t sandbox, int evaluation)
 {
   // check trackers for a hit
   int tracker_index = -1;
@@ -281,12 +308,17 @@ void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int
 			break;
 
 	  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
-	  if(get_l2_mshr_occupancy(0) < 8)
-	      l2_prefetch_line(0, addr, pf_address, FILL_L2);
-	  else
-	      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
-	  
+	  if (!sandbox_insert (sandbox, pf_address)) {
+			printf("Error IP Dtride Insert - Sandbox Full\n");
+			exit(1);
 		}
+	  if (!evaluation) {
+		  if(get_l2_mshr_occupancy(0) < 8)
+		      l2_prefetch_line(0, addr, pf_address, FILL_L2);
+		  else
+		      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
+		}
+	}
 	}
 
 	// update tracker
