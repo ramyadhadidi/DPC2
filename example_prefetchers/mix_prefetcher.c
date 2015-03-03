@@ -33,7 +33,7 @@
 // Defines
 //**********************************************************************
 // Sandbox
-#define TOTAL_SANDBOX	2
+#define TOTAL_SANDBOX	3
 #define FALSE_POSITIVE 10 			// from 1000-11==1.1%
 #define SANDBOX_PERIOD 256			// Period in L2 Accesses
 #define SANDBOX_SIZE_EACH 256
@@ -41,6 +41,11 @@
 // IP stride
 #define IP_TRACKER_COUNT 1024
 #define IP_PREFETCH_DEGREE 3
+
+// Stream
+#define STREAM_DETECTOR_COUNT 64
+#define STREAM_WINDOW 16
+#define STREAM_PREFETCH_DEGREE 2
 
 
 //**********************************************************************
@@ -51,7 +56,8 @@
 typedef struct sandbox
 {
 	// Data
-	unsigned long long int data[SANDBOX_SIZE_EACH];
+	// Max prefetch degree to work: 10
+	unsigned long long int data[SANDBOX_SIZE_EACH*10];
 
 	// Size
 	int size;
@@ -117,6 +123,23 @@ typedef struct ip_tracker
   unsigned long long int lru_cycle;
 } ip_tracker_t;
 
+// ---------------------------------------------------------------------
+// Stream
+typedef struct stream_detector
+{
+  // which 4 KB page this detector is monitoring
+  unsigned long long int page;
+  
+  // + or - direction for the stream
+  int direction;
+
+  // this must reach 2 before prefetches can begin
+  int confidence;
+
+  // cache line index within the page where prefetches will be issued
+  int pf_index;
+} stream_detector_t;
+
 //**********************************************************************
 // Global Data
 //**********************************************************************
@@ -130,12 +153,18 @@ int active_pref_num;
 // IP stride
 ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
 
+// Stream
+stream_detector_t detectors_stream[STREAM_DETECTOR_COUNT];
+int stream_replacement_index;
+
 //**********************************************************************
 // Instantiates
 //**********************************************************************
 void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, int evaluation);
 void l2_prefetcher_initialize_ip_stride();
 void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t* sandbox, int evaluation);
+void l2_prefetcher_initialize_stream();
+void l2_prefetcher_stream(unsigned long long int addr, sandbox_t *sandbox, int evaluation);
 
 //**********************************************************************
 // Main Functions
@@ -168,6 +197,11 @@ void l2_prefetcher_initialize(int cpu_num)
 		  case 1:
 		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * IP_PREFETCH_DEGREE + 1;
 		  	break;
+
+		  // Stream
+		  case 2:
+		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * STREAM_PREFETCH_DEGREE + 1;
+		  	break;
   	}
   }
 
@@ -177,8 +211,13 @@ void l2_prefetcher_initialize(int cpu_num)
   // Choose the first prefetcher as active one
   active_pref_num = 0;
 
+  //** Next Line
+
   //** IP stride
 	l2_prefetcher_initialize_ip_stride();
+
+	//** Stream
+	l2_prefetcher_initialize_stream();
 }
 
 // ---------------------------------------------------------------------
@@ -195,7 +234,12 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 
 		// IP Stride
 		case 1:
-			l2_prefetcher_initialize_ip_stride(addr, &sandboxes[1], 0);
+			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 0);
+			break;
+
+		// Stream
+		case 2:
+			l2_prefetcher_stream(addr, &sandboxes[2], 0);
 			break;
 
 		default:
@@ -254,6 +298,15 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 			  case 1:
 			  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * IP_PREFETCH_DEGREE + 1;
 			  	break;
+
+			  // Stream
+			  case 2:
+					sandboxes[i].max_size = SANDBOX_SIZE_EACH * STREAM_PREFETCH_DEGREE + 1;
+					break;
+
+				default:
+					printf("Error Active Prefetcher Number is not listed\n");
+					exit(1);
 	  	}
   	}
 
@@ -261,7 +314,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
   	sandbox_period_count = 0;
 	}
 
-	//** Check for Hits in Sandboxes
+	//** Check for Hits in Sandboxnboxes
 	int i;
 	for (i=0; i<TOTAL_SANDBOX; i++) {
 		if (sandbox_test(&sandboxes[i], addr))
@@ -269,8 +322,31 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 	}
 
 	//** Operate Sandboxes Prefetchers
-  l2_prefetcher_next_line(addr, &sandboxes[0], 1);
-  l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+	// since we had executed the active one we don't need to
+	// execute it again
+  switch (active_pref_num) {
+		// Next Line is active
+		case 0:
+			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+			l2_prefetcher_stream(addr, &sandboxes[2], 1);
+			break;
+
+		// IP Stride is active
+		case 1:
+			l2_prefetcher_next_line(addr, &sandboxes[0], 1);
+			l2_prefetcher_stream(addr, &sandboxes[2], 1);
+			break;
+
+		// Stream is active
+		case 2:
+			l2_prefetcher_next_line(addr, &sandboxes[0], 1);
+			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+			break;
+
+		default:
+			printf("Error Active Prefetcher Number is not listed - Sandbox\n");
+			exit(1);
+	}
 
 }
 
@@ -296,14 +372,13 @@ void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, in
 	// since addr is a byte address, we >>6 to get the cache line address, +1, and then <<6 it back to a byte address
 	// l2_prefetch_line is expecting byte addresses
 	unsigned long long int pref_addr = ((addr>>6)+1)<<6;
-	if (evaluation)
-		if (!sandbox_insert (sandbox, pref_addr)) {
-			printf("Error Next Line Insert - Sandbox Full\n");
-			exit(1);
-		}
+	if (!sandbox_insert (sandbox, pref_addr)) {
+		printf("Error Next Line Insert - Sandbox Full\n");
+		exit(1);
+
 	if (!evaluation)
 		l2_prefetch_line(0, addr, pref_addr, FILL_L2);
-
+	}
 }
 
 //**********************************************************************
@@ -401,12 +476,11 @@ void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int
 				break;
 
 		  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
-		  if (evaluation) {
-			  if (!sandbox_insert (sandbox, pf_address)) {
-					printf("Error IP Stride Insert - Sandbox Full\n");
-					exit(1);
-				}
+		  if (!sandbox_insert (sandbox, pf_address)) {
+				printf("Error IP Stride Insert - Sandbox Full\n");
+				exit(1);
 			}
+
 		  if (!evaluation) {
 			  if(get_l2_mshr_occupancy(0) < 8)
 			      l2_prefetch_line(0, addr, pf_address, FILL_L2);
@@ -419,4 +493,125 @@ void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int
 	// update tracker
   trackers_ip[tracker_index].last_addr = addr;
   trackers_ip[tracker_index].last_stride = stride;
+}
+
+//**********************************************************************
+// Stream Prefetcher
+//**********************************************************************
+/*
+	Prefetches are issued after a spatial locality is detected, and a 
+	stream direction can be determined.
+
+  Prefetches are issued into the L2 or LLC depending on L2 MSHR occupancy.
+*/
+
+void l2_prefetcher_initialize_stream()
+{
+  int i;
+  for(i=0; i<STREAM_DETECTOR_COUNT; i++)
+    {
+      detectors_stream[i].page = 0;
+      detectors_stream[i].direction = 0;
+      detectors_stream[i].confidence = 0;
+      detectors_stream[i].pf_index = -1;
+    }
+
+  stream_replacement_index = 0;
+}
+
+/*
+	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
+	sandbox_insert 1 = in evaluation
+*/
+void l2_prefetcher_stream(unsigned long long int addr, sandbox_t *sandbox, int evaluation)
+{
+  unsigned long long int cl_address = addr>>6;
+  unsigned long long int page = cl_address>>6;
+  int page_offset = cl_address&63;
+
+  //** Detect
+  // check for a detector hit
+  int detector_index = -1;
+
+  int i;
+  for(i=0; i<STREAM_DETECTOR_COUNT; i++) {
+      if(detectors_stream[i].page == page) {
+	  		detector_index = i;
+	  		break;
+		}
+	}
+
+	// This is a new page that doesn't have a detector yet, so allocate one
+	// allocation is based on Least recently allocated
+  if(detector_index == -1) { 
+      detector_index = stream_replacement_index;
+      stream_replacement_index++;
+      if(stream_replacement_index >= STREAM_DETECTOR_COUNT)
+	  		stream_replacement_index = 0;
+
+      // reset the oldest page
+      detectors_stream[detector_index].page = page;
+      detectors_stream[detector_index].direction = 0;
+      detectors_stream[detector_index].confidence = 0;
+      detectors_stream[detector_index].pf_index = page_offset;
+	}
+
+  //** Train
+  // upward
+  if(page_offset > detectors_stream[detector_index].pf_index) {
+  	// accesses outside the STREAM_WINDOW do not train the detector
+  	if((page_offset-detectors_stream[detector_index].pf_index) < STREAM_WINDOW) {
+	  	if(detectors_stream[detector_index].direction == -1)
+	    	// previously-set direction was wrong
+	     	detectors_stream[detector_index].confidence = 0;
+	  	else
+	      detectors_stream[detector_index].confidence++;
+
+	  // set the direction to +1
+	  detectors_stream[detector_index].direction = 1;
+		}
+	}
+	// downward
+  else if(page_offset < detectors_stream[detector_index].pf_index) {
+  	// accesses outside the STREAM_WINDOW do not train the detector
+  	if((detectors_stream[detector_index].pf_index-page_offset) < STREAM_WINDOW) {
+			if(detectors_stream[detector_index].direction == 1)
+	    	// previously-set direction was wrong
+	    	detectors_stream[detector_index].confidence = 0;
+	    else
+	      detectors_stream[detector_index].confidence++;
+
+	  // set the direction to -1
+    detectors_stream[detector_index].direction = -1;
+		}
+	}
+
+	//** Prefetch
+  // prefetch if confidence is high enough
+  if(detectors_stream[detector_index].confidence >= 2)	{
+		int i;
+		for(i=0; i<STREAM_PREFETCH_DEGREE; i++) {
+	  	detectors_stream[detector_index].pf_index += detectors_stream[detector_index].direction;
+	  	// Page boundary check
+			if((detectors_stream[detector_index].pf_index < 0) || (detectors_stream[detector_index].pf_index > 63))
+	      break;
+
+		  // perform prefetches
+		  unsigned long long int pf_address = (page<<12)+((detectors_stream[detector_index].pf_index)<<6);
+		  
+		  // check MSHR occupancy to decide whether to prefetch into the L2 or LLC
+		  if (!sandbox_insert (sandbox, pf_address)) {
+					printf("Error IP Stride Insert - Sandbox Full\n");
+					exit(1);
+			}
+
+			if (!evaluation) {
+			  if(get_l2_mshr_occupancy(0) > 8)
+		      l2_prefetch_line(0, addr, pf_address, FILL_LLC);
+			  else
+		      l2_prefetch_line(0, addr, pf_address, FILL_L2);
+		  }
+		}
+  }
+
 }
