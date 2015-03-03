@@ -47,6 +47,10 @@
 #define STREAM_WINDOW 16
 #define STREAM_PREFETCH_DEGREE 2
 
+// AMPM
+#define AMPM_PAGE_COUNT 64
+#define AMPM_PREFETCH_DEGREE 2
+
 
 //**********************************************************************
 // Structs & Their utulities
@@ -140,6 +144,27 @@ typedef struct stream_detector
   int pf_index;
 } stream_detector_t;
 
+// ---------------------------------------------------------------------
+// AMPM
+typedef struct ampm_page
+{
+  // page address
+  unsigned long long int page;
+
+  // The access map itself.
+  // Each element is set when the corresponding cache line is accessed.
+  // The whole structure is analyzed to make prefetching decisions.
+  // While this is coded as an integer array, it is used conceptually as a single 64-bit vector.
+  int access_map[64];
+
+  // This map represents cache lines in this page that have already been prefetched.
+  // We will only prefetch lines that haven't already been either demand accessed or prefetched.
+  int pf_map[64];
+
+  // used for page replacement
+  unsigned long long int lru;
+} ampm_page_t;
+
 //**********************************************************************
 // Global Data
 //**********************************************************************
@@ -157,6 +182,9 @@ ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
 stream_detector_t detectors_stream[STREAM_DETECTOR_COUNT];
 int stream_replacement_index;
 
+//AMPM
+ampm_page_t ampm_pages[AMPM_PAGE_COUNT];
+
 //**********************************************************************
 // Instantiates
 //**********************************************************************
@@ -165,6 +193,8 @@ void l2_prefetcher_initialize_ip_stride();
 void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int ip, sandbox_t* sandbox, int evaluation);
 void l2_prefetcher_initialize_stream();
 void l2_prefetcher_stream(unsigned long long int addr, sandbox_t *sandbox, int evaluation);
+void l2_prefetcher_initialize_ampm();
+void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int evaluation);
 
 //**********************************************************************
 // Main Functions
@@ -218,6 +248,9 @@ void l2_prefetcher_initialize(int cpu_num)
 
 	//** Stream
 	l2_prefetcher_initialize_stream();
+
+	//** AMPM
+	l2_prefetcher_initialize_ampm();
 }
 
 // ---------------------------------------------------------------------
@@ -613,5 +646,157 @@ void l2_prefetcher_stream(unsigned long long int addr, sandbox_t *sandbox, int e
 		  }
 		}
   }
+
+}
+
+
+//**********************************************************************
+// AMPM Prefetcher
+//**********************************************************************
+
+/*
+  This file describes a prefetcher that resembles a simplified version of the
+  Access Map Pattern Matching (AMPM) prefetcher, which won the first 
+  Data Prefetching Championship.  The original AMPM prefetcher tracked large
+  regions of virtual address space to make prefetching decisions, but this 
+  version works only on smaller 4 KB physical pages.
+*/
+
+void l2_prefetcher_initialize_ampm()
+{
+  int i;
+  for(i=0; i<AMPM_PAGE_COUNT; i++) {
+    ampm_pages[i].page = 0;
+    ampm_pages[i].lru = 0;
+
+    int j;
+    for(j=0; j<64; j++) {
+		  ampm_pages[i].access_map[j] = 0;
+		  ampm_pages[i].pf_map[j] = 0;
+		}
+  }
+}
+
+/*
+	sandbox_insert 0 = not in evaluation period (insert line to cache & sandbox)
+	sandbox_insert 1 = in evaluation
+*/
+void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int evaluation) {
+  unsigned long long int cl_address = addr>>6;
+  unsigned long long int page = cl_address>>6;
+  unsigned long long int page_offset = cl_address&63;
+
+  //** Serching for the Page
+  // check to see if we have a page hit
+  int page_index = -1;
+  int i;
+  for(i=0; i<AMPM_PAGE_COUNT; i++) {
+    if(ampm_pages[i].page == page) {
+		  page_index = i;
+  		break;
+  	}
+	}
+
+	// the page was not found, so we must replace an old page with this new page
+  if(page_index == -1) {
+    // find the oldest page
+    int lru_index = 0;
+    unsigned long long int lru_cycle = ampm_pages[lru_index].lru;
+    int i;
+    for(i=0; i<AMPM_PAGE_COUNT; i++) {
+	  	if(ampm_pages[i].lru < lru_cycle) {
+	      lru_index = i;
+	      lru_cycle = ampm_pages[lru_index].lru;
+	    }
+		}
+		page_index = lru_index;
+
+    // reset the oldest page
+    ampm_pages[page_index].page = page;
+    for(i=0; i<64; i++) {
+		  ampm_pages[page_index].access_map[i] = 0;
+		  ampm_pages[page_index].pf_map[i] = 0;
+		}
+	}
+
+  // update LRU
+  ampm_pages[page_index].lru = get_current_cycle(0);
+
+  // mark the access map
+  ampm_pages[page_index].access_map[page_offset] = 1;
+
+  //** Prefetching
+  // positive prefetching
+  int count_prefetches = 0;
+  for(i=1; i<=16; i++) {
+	  int check_index1 = page_offset - i;
+	  int check_index2 = page_offset - 2*i;
+	  int pf_index = page_offset + i;
+		
+		if(check_index2 < 0)
+	 		break;
+
+    if(pf_index > 63)
+	  	break;
+
+		if(count_prefetches >= PREFETCH_DEGREE)
+	  	break;
+
+    if(ampm_pages[page_index].access_map[pf_index] == 1)
+	  	continue;
+
+    if(ampm_pages[page_index].pf_map[pf_index] == 1)
+	  	continue;
+
+		if((ampm_pages[page_index].access_map[check_index1]==1) && (ampm_pages[page_index].access_map[check_index2]==1)) {
+		  // we found the stride repeated twice, so issue a prefetch
+		  unsigned long long int pf_address = (page<<12)+(pf_index<<6);
+
+		  if(get_l2_mshr_occupancy(0) < 8)
+		  	l2_prefetch_line(0, addr, pf_address, FILL_L2);
+		  else
+				l2_prefetch_line(0, addr, pf_address, FILL_LLC);	      
+
+		  // mark the prefetched line so we don't prefetch it again
+		  ampm_pages[page_index].pf_map[pf_index] = 1;
+		  count_prefetches++;
+		}
+	}
+
+  // negative prefetching
+  count_prefetches = 0;
+  for(i=1; i<=16; i++) {
+		int check_index1 = page_offset + i;
+		int check_index2 = page_offset + 2*i;
+		int pf_index = page_offset - i;
+
+		if(check_index2 > 63)
+	  	break;
+
+    if(pf_index < 0)
+	  	break;
+
+    if(count_prefetches >= PREFETCH_DEGREE)
+	  	break;
+
+    if(ampm_pages[page_index].access_map[pf_index] == 1)
+	  	continue;
+
+    if(ampm_pages[page_index].pf_map[pf_index] == 1)
+	  	continue;
+
+    if((ampm_pages[page_index].access_map[check_index1]==1) && (ampm_pages[page_index].access_map[check_index2]==1)) {
+	  	unsigned long long int pf_address = (page<<12)+(pf_index<<6);
+
+	  if(get_l2_mshr_occupancy(0) < 12)
+			l2_prefetch_line(0, addr, pf_address, FILL_L2);
+	  else
+			l2_prefetch_line(0, addr, pf_address, FILL_LLC);	      
+
+	  // mark the prefetched line so we don't prefetch it again
+	  ampm_pages[page_index].pf_map[pf_index] = 1;
+	  count_prefetches++;
+		}
+	}
 
 }
