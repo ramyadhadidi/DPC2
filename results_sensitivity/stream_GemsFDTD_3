@@ -8,36 +8,36 @@ Using 1MB Last Level Cache
 Using 12.8 GB/s DRAM bandwidth
 Streaming Prefetcher
 Knobs visible from prefetcher: 0 0 0
-Instructions Retired: 100001 Cycle: 41354 Hearbeat IPC: 2.418170 Cumulative IPC: 2.418170
-Instructions Retired: 200000 Cycle: 71202 Hearbeat IPC: 3.350275 Cumulative IPC: 2.808910
-Instructions Retired: 300003 Cycle: 101283 Hearbeat IPC: 3.324457 Cumulative IPC: 2.962027
-Instructions Retired: 400000 Cycle: 131502 Hearbeat IPC: 3.309077 Cumulative IPC: 3.041779
-Instructions Retired: 500003 Cycle: 161718 Hearbeat IPC: 3.309604 Cumulative IPC: 3.091820
-Instructions Retired: 600001 Cycle: 191945 Hearbeat IPC: 3.308234 Cumulative IPC: 3.125901
-Instructions Retired: 700000 Cycle: 221873 Hearbeat IPC: 3.341319 Cumulative IPC: 3.154958
-Instructions Retired: 800000 Cycle: 251860 Hearbeat IPC: 3.334778 Cumulative IPC: 3.176368
-Instructions Retired: 900003 Cycle: 282029 Hearbeat IPC: 3.314760 Cumulative IPC: 3.191172
-Instructions Retired: 1000004 Cycle: 312756 Hearbeat IPC: 3.254499 Cumulative IPC: 3.197393
-Instructions Retired: 1100000 Cycle: 343069 Hearbeat IPC: 3.298783 Cumulative IPC: 3.206352
-Instructions Retired: 1200002 Cycle: 373331 Hearbeat IPC: 3.304540 Cumulative IPC: 3.214311
-Instructions Retired: 1300000 Cycle: 403741 Hearbeat IPC: 3.288326 Cumulative IPC: 3.219886
-Instructions Retired: 1400005 Cycle: 433789 Hearbeat IPC: 3.328175 Cumulative IPC: 3.227387
-Instructions Retired: 1500000 Cycle: 464035 Hearbeat IPC: 3.306057 Cumulative IPC: 3.232515
-Instructions Retired: 1600005 Cycle: 494230 Hearbeat IPC: 3.311972 Cumulative IPC: 3.237369
-Instructions Retired: 1700002 Cycle: 524756 Hearbeat IPC: 3.275798 Cumulative IPC: 3.239605
-Instructions Retired: 1800000 Cycle: 555212 Hearbeat IPC: 3.283360 Cumulative IPC: 3.242005
-Instructions Retired: 1900002 Cycle: 585544 Hearbeat IPC: 3.296914 Cumulative IPC: 3.244849
-Instructions Retired: 2000005 Cycle: 615674 Hearbeat IPC: 3.319051 Cumulative IPC: 3.248481
-Instructions Retired: 2100001 Cycle: 646108 Hearbeat IPC: 3.285667 Cumulative IPC: 3.250232
-Instructions Retired: 2200005 Cycle: 676588 Hearbeat IPC: 3.280971 Cumulative IPC: 3.251617
-Instructions Retired: 2300004 Cycle: 706668 Hearbeat IPC: 3.324435 Cumulative IPC: 3.254716
-Instructions Retired: 2400000 Cycle: 736794 Hearbeat IPC: 3.319259 Cumulative IPC: 3.257355
-Instructions Retired: 2500003 Cycle: 767978 Hearbeat IPC: 3.206869 Cumulative IPC: 3.255306
-Instructions Retired: 2600000 Cycle: 798270 Hearbeat IPC: 3.301103 Cumulative IPC: 3.257043
-Instructions Retired: 2700002 Cycle: 828565 Hearbeat IPC: 3.300941 Cumulative IPC: 3.258648
-Instructions Retired: 2800000 Cycle: 858902 Hearbeat IPC: 3.296239 Cumulative IPC: 3.259976
-Instructions Retired: 2900000 Cycle: 889356 Hearbeat IPC: 3.283641 Cumulative IPC: 3.260787
-Instructions Retired: 3000002 Cycle: 919406 Hearbeat IPC: 3.327854 Cumulative IPC: 3.262979
+Instructions Retired: 100001 Cycle: 38204 Hearbeat IPC: 2.617553 Cumulative IPC: 2.617553
+Instructions Retired: 200002 Cycle: 67019 Hearbeat IPC: 3.470449 Cumulative IPC: 2.984258
+Instructions Retired: 300003 Cycle: 95561 Hearbeat IPC: 3.503644 Cumulative IPC: 3.139387
+Instructions Retired: 400000 Cycle: 124285 Hearbeat IPC: 3.481305 Cumulative IPC: 3.218409
+Instructions Retired: 500003 Cycle: 152897 Hearbeat IPC: 3.495142 Cumulative IPC: 3.270195
+Instructions Retired: 600001 Cycle: 181571 Hearbeat IPC: 3.487410 Cumulative IPC: 3.304498
+Instructions Retired: 700000 Cycle: 210280 Hearbeat IPC: 3.483193 Cumulative IPC: 3.328895
+Instructions Retired: 800001 Cycle: 238753 Hearbeat IPC: 3.512134 Cumulative IPC: 3.350747
+Instructions Retired: 900003 Cycle: 267570 Hearbeat IPC: 3.470243 Cumulative IPC: 3.363617
+Instructions Retired: 1000004 Cycle: 296365 Hearbeat IPC: 3.472860 Cumulative IPC: 3.374231
+Instructions Retired: 1100000 Cycle: 325264 Hearbeat IPC: 3.460189 Cumulative IPC: 3.381868
+Instructions Retired: 1200002 Cycle: 354092 Hearbeat IPC: 3.468919 Cumulative IPC: 3.388955
+Instructions Retired: 1300000 Cycle: 382945 Hearbeat IPC: 3.465775 Cumulative IPC: 3.394743
+Instructions Retired: 1400005 Cycle: 411961 Hearbeat IPC: 3.446547 Cumulative IPC: 3.398392
+Instructions Retired: 1500000 Cycle: 440657 Hearbeat IPC: 3.484632 Cumulative IPC: 3.404008
+Instructions Retired: 1600005 Cycle: 469375 Hearbeat IPC: 3.482311 Cumulative IPC: 3.408799
+Instructions Retired: 1700002 Cycle: 498306 Hearbeat IPC: 3.456396 Cumulative IPC: 3.411562
+Instructions Retired: 1800001 Cycle: 527143 Hearbeat IPC: 3.467732 Cumulative IPC: 3.414635
+Instructions Retired: 1900001 Cycle: 555829 Hearbeat IPC: 3.486021 Cumulative IPC: 3.418319
+Instructions Retired: 2000005 Cycle: 584464 Hearbeat IPC: 3.492369 Cumulative IPC: 3.421947
+Instructions Retired: 2100001 Cycle: 613294 Hearbeat IPC: 3.468470 Cumulative IPC: 3.424134
+Instructions Retired: 2200005 Cycle: 642101 Hearbeat IPC: 3.471517 Cumulative IPC: 3.426260
+Instructions Retired: 2300004 Cycle: 670934 Hearbeat IPC: 3.468214 Cumulative IPC: 3.428063
+Instructions Retired: 2400002 Cycle: 699786 Hearbeat IPC: 3.465895 Cumulative IPC: 3.429623
+Instructions Retired: 2500003 Cycle: 729434 Hearbeat IPC: 3.372942 Cumulative IPC: 3.427319
+Instructions Retired: 2600000 Cycle: 758270 Hearbeat IPC: 3.467783 Cumulative IPC: 3.428858
+Instructions Retired: 2700002 Cycle: 787234 Hearbeat IPC: 3.452631 Cumulative IPC: 3.429733
+Instructions Retired: 2800000 Cycle: 815946 Hearbeat IPC: 3.482795 Cumulative IPC: 3.431600
+Instructions Retired: 2900000 Cycle: 844817 Hearbeat IPC: 3.463683 Cumulative IPC: 3.432696
+Instructions Retired: 3000002 Cycle: 873688 Hearbeat IPC: 3.463753 Cumulative IPC: 3.433722
 
-Simulation complete. Instructions retired: 3099758 Cycles elapsed: 949575 IPC: 3.264364
+Simulation complete. Instructions retired: 3099758 Cycles elapsed: 902427 IPC: 3.434913
 

@@ -33,7 +33,7 @@
 // Defines
 //**********************************************************************
 // Sandbox
-#define TOTAL_SANDBOX	3
+#define TOTAL_SANDBOX	4
 #define FALSE_POSITIVE 10 			// from 1000-11==1.1%
 #define SANDBOX_PERIOD 256			// Period in L2 Accesses
 #define SANDBOX_SIZE_EACH 256
@@ -217,7 +217,7 @@ void l2_prefetcher_initialize(int cpu_num)
   	// Each sandbox for a prefetcher max_size is different
   	// based on their degree
   	// +1 because of last cycle
-  	switch (i){
+  	switch (i) {
   		// Next Line
   		case 0:	  	
 		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH + 1;
@@ -232,6 +232,15 @@ void l2_prefetcher_initialize(int cpu_num)
 		  case 2:
 		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * STREAM_PREFETCH_DEGREE + 1;
 		  	break;
+
+		  // AMPM
+		  case 3:
+		  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * AMPM_PREFETCH_DEGREE * 2 + 1;
+		  	break;
+
+		  default:
+		  	printf("Error Active Prefetcher Number is not listed - Initialization\n");
+				exit(1);
   	}
   }
 
@@ -273,6 +282,10 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		// Stream
 		case 2:
 			l2_prefetcher_stream(addr, &sandboxes[2], 0);
+			break;
+
+		case 3:
+			l2_prefetcher_ampm(addr, &sandboxes[3], 0);
 			break;
 
 		default:
@@ -337,6 +350,11 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 					sandboxes[i].max_size = SANDBOX_SIZE_EACH * STREAM_PREFETCH_DEGREE + 1;
 					break;
 
+				// AMPM
+				case 3:
+			  	sandboxes[i].max_size = SANDBOX_SIZE_EACH * AMPM_PREFETCH_DEGREE * 2 + 1;
+			  	break;
+
 				default:
 					printf("Error Active Prefetcher Number is not listed\n");
 					exit(1);
@@ -362,18 +380,28 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		case 0:
 			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
 			l2_prefetcher_stream(addr, &sandboxes[2], 1);
+			l2_prefetcher_ampm(addr, &sandboxes[3], 1);
 			break;
 
 		// IP Stride is active
 		case 1:
 			l2_prefetcher_next_line(addr, &sandboxes[0], 1);
 			l2_prefetcher_stream(addr, &sandboxes[2], 1);
+			l2_prefetcher_ampm(addr, &sandboxes[3], 1);
 			break;
 
 		// Stream is active
 		case 2:
 			l2_prefetcher_next_line(addr, &sandboxes[0], 1);
 			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+			l2_prefetcher_ampm(addr, &sandboxes[3], 1);
+			break;
+
+		// AMPM is active
+		case 3:
+			l2_prefetcher_next_line(addr, &sandboxes[0], 1);
+			l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1);
+			l2_prefetcher_stream(addr, &sandboxes[2], 1);
 			break;
 
 		default:
@@ -408,10 +436,10 @@ void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, in
 	if (!sandbox_insert (sandbox, pref_addr)) {
 		printf("Error Next Line Insert - Sandbox Full\n");
 		exit(1);
+	}
 
 	if (!evaluation)
 		l2_prefetch_line(0, addr, pref_addr, FILL_L2);
-	}
 }
 
 //**********************************************************************
@@ -739,7 +767,7 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
     if(pf_index > 63)
 	  	break;
 
-		if(count_prefetches >= PREFETCH_DEGREE)
+		if(count_prefetches >= AMPM_PREFETCH_DEGREE)
 	  	break;
 
     if(ampm_pages[page_index].access_map[pf_index] == 1)
@@ -752,10 +780,17 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
 		  // we found the stride repeated twice, so issue a prefetch
 		  unsigned long long int pf_address = (page<<12)+(pf_index<<6);
 
-		  if(get_l2_mshr_occupancy(0) < 8)
-		  	l2_prefetch_line(0, addr, pf_address, FILL_L2);
-		  else
-				l2_prefetch_line(0, addr, pf_address, FILL_LLC);	      
+			if (!sandbox_insert (sandbox, pf_address)) {
+						printf("Error AMPM Insert - Sandbox Full\n");
+						exit(1);
+			}
+
+			if (!evaluation) {
+			  if(get_l2_mshr_occupancy(0) < 8)
+			  	l2_prefetch_line(0, addr, pf_address, FILL_L2);
+			  else
+					l2_prefetch_line(0, addr, pf_address, FILL_LLC);	     
+			} 
 
 		  // mark the prefetched line so we don't prefetch it again
 		  ampm_pages[page_index].pf_map[pf_index] = 1;
@@ -776,7 +811,7 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
     if(pf_index < 0)
 	  	break;
 
-    if(count_prefetches >= PREFETCH_DEGREE)
+    if(count_prefetches >= AMPM_PREFETCH_DEGREE)
 	  	break;
 
     if(ampm_pages[page_index].access_map[pf_index] == 1)
@@ -788,14 +823,21 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
     if((ampm_pages[page_index].access_map[check_index1]==1) && (ampm_pages[page_index].access_map[check_index2]==1)) {
 	  	unsigned long long int pf_address = (page<<12)+(pf_index<<6);
 
-	  if(get_l2_mshr_occupancy(0) < 12)
-			l2_prefetch_line(0, addr, pf_address, FILL_L2);
-	  else
-			l2_prefetch_line(0, addr, pf_address, FILL_LLC);	      
+			if (!sandbox_insert (sandbox, pf_address)) {
+				printf("Error AMPM Insert - Sandbox Full\n");
+				exit(1);
+			}
 
-	  // mark the prefetched line so we don't prefetch it again
-	  ampm_pages[page_index].pf_map[pf_index] = 1;
-	  count_prefetches++;
+		  if (!evaluation) {
+			  if(get_l2_mshr_occupancy(0) < 12)
+					l2_prefetch_line(0, addr, pf_address, FILL_L2);
+			  else
+					l2_prefetch_line(0, addr, pf_address, FILL_LLC);
+			}
+
+		  // mark the prefetched line so we don't prefetch it again
+		  ampm_pages[page_index].pf_map[pf_index] = 1;
+		  count_prefetches++;
 		}
 	}
 
