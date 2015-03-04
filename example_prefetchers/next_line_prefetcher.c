@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include "../inc/prefetcher.h"
 
+#define PREFETCH_DEGREE 1
+
 void l2_prefetcher_initialize(int cpu_num)
 {
   printf("Next-Line Prefetcher\n");
@@ -28,7 +30,13 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
   // next line prefetcher
   // since addr is a byte address, we >>6 to get the cache line address, +1, and then <<6 it back to a byte address
   // l2_prefetch_line is expecting byte addresses
-  l2_prefetch_line(0, addr, ((addr>>6)+1)<<6, FILL_L2);
+  unsigned long long int pf_addr = ((addr>>6)+1)<<6;
+  int i;
+  for (i=0; i<PREFETCH_DEGREE; i++) {
+    l2_prefetch_line(0, addr, pf_addr, FILL_L2);
+    pf_addr = ((pf_addr>>6)+1)<<6;
+  }
+
 }
 
 void l2_cache_fill(int cpu_num, unsigned long long int addr, int set, int way, int prefetch, unsigned long long int evicted_addr)

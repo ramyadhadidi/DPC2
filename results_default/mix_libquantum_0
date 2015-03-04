@@ -1,0 +1,378 @@
+
+*** Data Prefetching Championship 2 Simulator ***
+
+Warmup Instructions: 10000000
+Simulation Instructions: 100000000
+Scramble loads OFF
+Using 1MB Last Level Cache
+Using 12.8 GB/s DRAM bandwidth
+Mix Prefetcher
+Knobs visible from prefetcher: 0 0 0
+	score 0 = 84
+	score 1 = 223
+	score 2 = 93
+	score 3 = 234
+	active prefetcher = 3
+	score 0 = 30
+	score 1 = 234
+	score 2 = 93
+	score 3 = 225
+	active prefetcher = 1
+Instructions Retired: 100000 Cycle: 44172 Hearbeat IPC: 2.263878 Cumulative IPC: 2.263878
+	score 0 = 163
+	score 1 = 97
+	score 2 = 57
+	score 3 = 215
+	active prefetcher = 3
+	score 0 = 105
+	score 1 = 138
+	score 2 = 66
+	score 3 = 209
+	active prefetcher = 3
+	score 0 = 0
+	score 1 = 239
+	score 2 = 27
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 2
+	score 1 = 61
+	score 2 = 22
+	score 3 = 1
+	active prefetcher = 1
+Instructions Retired: 200000 Cycle: 82523 Hearbeat IPC: 2.607494 Cumulative IPC: 2.423567
+	score 0 = 0
+	score 1 = 0
+	score 2 = 5
+	score 3 = 0
+	active prefetcher = 2
+Instructions Retired: 300001 Cycle: 118574 Hearbeat IPC: 2.773876 Cumulative IPC: 2.530074
+	score 0 = 0
+	score 1 = 229
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 42
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 400004 Cycle: 142394 Hearbeat IPC: 4.198279 Cumulative IPC: 2.809135
+	score 0 = 0
+	score 1 = 62
+	score 2 = 8
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 69
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 90
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 500001 Cycle: 159525 Hearbeat IPC: 5.837196 Cumulative IPC: 3.134311
+	score 0 = 0
+	score 1 = 86
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 91
+	score 2 = 1
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 94
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 600000 Cycle: 180962 Hearbeat IPC: 4.664785 Cumulative IPC: 3.315613
+	score 0 = 0
+	score 1 = 58
+	score 2 = 4
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 0
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 0
+Instructions Retired: 700003 Cycle: 216995 Hearbeat IPC: 2.775317 Cumulative IPC: 3.225895
+	score 0 = 0
+	score 1 = 212
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 85
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 800001 Cycle: 244123 Hearbeat IPC: 3.686155 Cumulative IPC: 3.277041
+	score 0 = 0
+	score 1 = 90
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 28
+	score 2 = 1
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 900000 Cycle: 276641 Hearbeat IPC: 3.075189 Cumulative IPC: 3.253314
+	score 0 = 0
+	score 1 = 0
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 0
+Instructions Retired: 1000000 Cycle: 313053 Hearbeat IPC: 2.746347 Cumulative IPC: 3.194347
+	score 0 = 48
+	score 1 = 218
+	score 2 = 57
+	score 3 = 133
+	active prefetcher = 1
+	score 0 = 67
+	score 1 = 183
+	score 2 = 86
+	score 3 = 220
+	active prefetcher = 3
+Instructions Retired: 1100005 Cycle: 353829 Hearbeat IPC: 2.452546 Cumulative IPC: 3.108860
+	score 0 = 20
+	score 1 = 231
+	score 2 = 94
+	score 3 = 237
+	active prefetcher = 3
+	score 0 = 16
+	score 1 = 237
+	score 2 = 93
+	score 3 = 237
+	active prefetcher = 1
+Instructions Retired: 1200001 Cycle: 391510 Hearbeat IPC: 2.653751 Cumulative IPC: 3.065058
+	score 0 = 10
+	score 1 = 31
+	score 2 = 21
+	score 3 = 41
+	active prefetcher = 3
+	score 0 = 0
+	score 1 = 239
+	score 2 = 27
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1300000 Cycle: 427564 Hearbeat IPC: 2.773590 Cumulative IPC: 3.040480
+	score 0 = 0
+	score 1 = 14
+	score 2 = 18
+	score 3 = 0
+	active prefetcher = 2
+	score 0 = 0
+	score 1 = 237
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 87
+	score 2 = 18
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1400003 Cycle: 453661 Hearbeat IPC: 3.831973 Cumulative IPC: 3.086011
+	score 0 = 0
+	score 1 = 56
+	score 2 = 15
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1500001 Cycle: 487245 Hearbeat IPC: 2.977549 Cumulative IPC: 3.078536
+	score 0 = 0
+	score 1 = 0
+	score 2 = 4
+	score 3 = 0
+	active prefetcher = 2
+	score 0 = 0
+	score 1 = 241
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1600004 Cycle: 521223 Hearbeat IPC: 2.943169 Cumulative IPC: 3.069711
+	score 0 = 0
+	score 1 = 43
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 61
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1700005 Cycle: 538507 Hearbeat IPC: 5.785756 Cumulative IPC: 3.156886
+	score 0 = 0
+	score 1 = 67
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 90
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 85
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 85
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1800003 Cycle: 555560 Hearbeat IPC: 5.863954 Cumulative IPC: 3.239980
+	score 0 = 0
+	score 1 = 90
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 59
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 1900003 Cycle: 585693 Hearbeat IPC: 3.318621 Cumulative IPC: 3.244025
+	score 0 = 0
+	score 1 = 0
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 0
+Instructions Retired: 2000000 Cycle: 621745 Hearbeat IPC: 2.773688 Cumulative IPC: 3.216753
+	score 0 = 0
+	score 1 = 210
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 89
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 87
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 2100001 Cycle: 645258 Hearbeat IPC: 4.253009 Cumulative IPC: 3.254514
+	score 0 = 0
+	score 1 = 28
+	score 2 = 1
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 2200003 Cycle: 681325 Hearbeat IPC: 2.772673 Cumulative IPC: 3.229007
+	score 0 = 0
+	score 1 = 0
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 0
+	score 0 = 48
+	score 1 = 220
+	score 2 = 56
+	score 3 = 133
+	active prefetcher = 1
+Instructions Retired: 2300000 Cycle: 720655 Hearbeat IPC: 2.542512 Cumulative IPC: 3.191541
+	score 0 = 67
+	score 1 = 184
+	score 2 = 83
+	score 3 = 219
+	active prefetcher = 3
+	score 0 = 20
+	score 1 = 235
+	score 2 = 94
+	score 3 = 237
+	active prefetcher = 3
+Instructions Retired: 2400000 Cycle: 759356 Hearbeat IPC: 2.583913 Cumulative IPC: 3.160573
+	score 0 = 15
+	score 1 = 234
+	score 2 = 91
+	score 3 = 235
+	active prefetcher = 3
+	score 0 = 0
+	score 1 = 232
+	score 2 = 44
+	score 3 = 49
+	active prefetcher = 1
+Instructions Retired: 2500000 Cycle: 795855 Hearbeat IPC: 2.739801 Cumulative IPC: 3.141276
+	score 0 = 0
+	score 1 = 0
+	score 2 = 11
+	score 3 = 1
+	active prefetcher = 2
+	score 0 = 0
+	score 1 = 227
+	score 2 = 5
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 2600005 Cycle: 831910 Hearbeat IPC: 2.773679 Cumulative IPC: 3.125344
+	score 0 = 0
+	score 1 = 74
+	score 2 = 13
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 94
+	score 2 = 20
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 62
+	score 2 = 20
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 2700000 Cycle: 855458 Hearbeat IPC: 4.246433 Cumulative IPC: 3.156204
+	score 0 = 0
+	score 1 = 0
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 0
+Instructions Retired: 2800003 Cycle: 891476 Hearbeat IPC: 2.776473 Cumulative IPC: 3.140862
+	score 0 = 0
+	score 1 = 175
+	score 2 = 2
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 2900000 Cycle: 916905 Hearbeat IPC: 3.932400 Cumulative IPC: 3.162814
+	score 0 = 0
+	score 1 = 40
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 38
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 82
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+Instructions Retired: 3000001 Cycle: 934115 Hearbeat IPC: 5.810633 Cumulative IPC: 3.211597
+	score 0 = 0
+	score 1 = 84
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 85
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 90
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+	score 0 = 0
+	score 1 = 98
+	score 2 = 0
+	score 3 = 0
+	active prefetcher = 1
+
+Simulation complete. Instructions retired: 3099757 Cycles elapsed: 953873 IPC: 3.249654
+
