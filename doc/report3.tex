@@ -111,6 +111,7 @@ Figure \ref{pic:perf} shows the performance speedups for different policies. X a
 In this section we evaluate the sensitivity of each workload to the aggressiveness of prefetchers. Aggressiveness is defined as prefetching degree in the code. It means that how many prefetches will be done for a demand access. In following subsections we investigate this for different policies.
 
 \subsection{Next Line}
+As figure \ref{pic:next-agg} shows, increasing next line prefetcher degree causes cache pollution and also a significant negative speedup. This happens mostly for omnetpp, mcf and gcc which as next subsection will show have not a very good detectable accesses. Therefore, when increasing the degree it will cause the useful cache lines to be evicted. lbm and libquantum are only workloads that get speedup with higher degree. As figure \ref{pic:stream-agg} shows, these two has a good speedup in stream prefetcher too. This suggest that these workload accesses have a locality which next line prefetcher exploits. However, we can not see the same result for leslie3D. This could be because of negative distance accesses in leslie3D. Therefore, leslie3D can get speedup in stream prefetcher and not next line prefetcher (which only prefetches next lines and not previous lines). GemsFDTD probably has a random access pattern, since non of the prefetchers have speedup with GemsFDTD (figure \ref{pic:perf}). For milc workload, it is possible have different patterns as figure \ref{pic:perf} shows for prefetcher stream and ip-stride. However, increasing next-line prefetcher's degree caused more pollution than gains.
 
 \begin{figure}[!h]
   \label{pic:next-agg}
@@ -120,7 +121,7 @@ In this section we evaluate the sensitivity of each workload to the aggressivene
 \end{figure}
 
 \subsection{IP Stride}
-
+The results is in figure \ref{pic:ip-agg}. As we can see except milc workload, almost not other workloads get the speedup with higher degree for ip-stride prefetcher. Probably this is because almost all access are stride accesses in milc. This can be seen in figure \ref{pic:perf} as the speed up of a more complex pattern detector like AMPM is the same as simple ones like ip-stride prefetcher. Degradation of speedup in other workloads it is probably because ip-stride prefetcher has no confirmation based prefetches like stream prefetcher (\ref{pic:stream-agg}). As for stream prefetcher could be seen, because this prefetcher need confirmation its degradation with degree is less than ip-stride. 
 
 \begin{figure}[!h]
   \label{pic:ip-agg}
@@ -130,7 +131,7 @@ In this section we evaluate the sensitivity of each workload to the aggressivene
 \end{figure}
 
 \subsection{Stream}
-
+For stream prefetcher, workloads lbm, leslie3D and milc get the most benefit with prefetcher degree increments. milc, as we talked about before, is consist of strided accesses therefore it gets benefit with more degree. lbm is the only benchmark that gets more benefit for next-line prefetcher (figure \ref{pic:next-agg}), it suggest that it will also get benefits from stream prefetcher. Since, stream prefetcher is like a confirmation based next/previous line prefetcher. gcc, omnetpp, GemsFDTD and mcf are all like each other. Stream prefetcher cannot detect their misses. Also, gcc has a negative speedup in stream prefetcher. This is probably because gcc have a random locality, therefore cache pollution (which is stream is higher) has more impact.
 
 \begin{figure}[!h]
   \label{pic:stream-agg}
@@ -140,6 +141,7 @@ In this section we evaluate the sensitivity of each workload to the aggressivene
 \end{figure}
 
 \subsection{AMPM}
+For AMPM larger degrees act as degree of two as seen in figure \ref{pic:ampm-agg}. This could be because of various reasons. First, it would be because there is not matching in the patters. Or, there as a match, since the code has a lot of breaks in it, it usually does not prefetch the data. This is because this version of AMPM monitors a smaller indexes and also it can only fetch in the current working memory page.
 
 \begin{figure}[!h]
   \label{pic:ampm-agg}
@@ -149,6 +151,10 @@ In this section we evaluate the sensitivity of each workload to the aggressivene
 \end{figure}
 
 \section{Online Prefetching Mechanism}
+
+\subsection{Parallel Sandboxes}
+I get the idea for this mechanism from the last paper about prefetchers in HPCA 2014, ''Sandbox Prefetching: Safe Run-Time Evaluation of Aggressive Prefetchers``. However, since there is no budget limitations, I implemented the parallel version of this paper to evaluate four different prefetchers. General mechanism is done on every fixed number of L2 accesses. In every period, each prefetchers imports its prefetches lines in their own sandbox. In subsequent accesses, we also check these sandboxes to see if a prefetcher predict a line correctly or not. If yes, we will increase the score of that prefetcher. In the end of that period, we make decision about the next period's prefetcher based on these scores. 
+
 
 \section{Proposed Improved Prefetcher}
 
