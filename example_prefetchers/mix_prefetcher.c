@@ -43,7 +43,7 @@
 
 // IP stride
 #define IP_TRACKER_COUNT 1024
-#define IP_PREFETCH_DEGREE 1
+#define IP_PREFETCH_DEGREE 2
 
 // Stream
 #define STREAM_DETECTOR_COUNT 64
@@ -180,6 +180,7 @@ int sandbox_period_count;
 int active_pref_num;
 
 int index_max = 0;
+int max_score = 0;
 
 // IP stride
 ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
@@ -300,16 +301,60 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 			exit(1);
 	}
 
+	//** Check for Hits in Sandboxnboxes
+	int i;
+	for (i=0; i<TOTAL_SANDBOX; i++) {
+		if (sandbox_test(&sandboxes[i], addr))
+				sandbox_scores[i]++;
+	}
+
+	//** Operate Sandboxes Prefetchers
+	// since we had executed the active one we don't need to
+	// execute it again
+  switch (active_pref_num) {
+		// Next Line is active
+		case 0:
+		l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1, cache_hit);
+		l2_prefetcher_stream(addr, &sandboxes[2], 1, cache_hit);
+		l2_prefetcher_ampm(addr, &sandboxes[3], 1, cache_hit);
+		break;
+
+		// IP Stride is active
+		case 1:
+		l2_prefetcher_next_line(addr, &sandboxes[0], 1, cache_hit);
+		l2_prefetcher_stream(addr, &sandboxes[2], 1, cache_hit);
+		l2_prefetcher_ampm(addr, &sandboxes[3], 1, cache_hit);
+		break;
+
+		// Stream is active
+		case 2:
+		l2_prefetcher_next_line(addr, &sandboxes[0], 1, cache_hit);
+		l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1, cache_hit);
+		l2_prefetcher_ampm(addr, &sandboxes[3], 1, cache_hit);
+		break;
+
+		// AMPM is active
+		case 3:
+		l2_prefetcher_next_line(addr, &sandboxes[0], 1, cache_hit);
+		l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1, cache_hit);
+		l2_prefetcher_stream(addr, &sandboxes[2], 1, cache_hit);
+		break;
+
+		default:
+		printf("Error Active Prefetcher Number is not listed - Sandbox\n");
+		exit(1);
+	}
+
 	//** Increase Evaluation Period
 	// If period is done decide next active prefetcher - reset scores & sandboxes - reset period
 	sandbox_period_count++;
 	if (sandbox_period_count == SANDBOX_PERIOD) {
 		// decide next active prefetcher
 		int i;
-		int max_score = 0;
+		
 		for (i=0; i<TOTAL_SANDBOX; i++) {
-			printf("\tscore %d = %d\n", i, sandbox_scores[i]);
-			printf("\tsize %d = %d\n", i, sandboxes[i].size);
+			//printf("\tscore %d = %d\n", i, sandbox_scores[i]);
+			//printf("\tsize %d = %d\n", i, sandboxes_old[i].size);
 			if (sandbox_scores[i] > max_score) {
 				index_max = i;
 				max_score = sandbox_scores[i];
@@ -319,7 +364,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		active_pref_num = index_max;
 
 
-		printf("\tactive prefetcher = %d\n", active_pref_num);
+		//printf("\tactive prefetcher = %d\n", active_pref_num);
 
 		/*
 		for (i=0; i<TOTAL_SANDBOX; i++) {
@@ -331,6 +376,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		}		
 		printf("\n");
 		*/
+
 		// copy sandboxes to sandboxes_old
 		for (i=0; i<TOTAL_SANDBOX; i++) {
 			sandboxes_old[i].size = sandboxes[i].size;
@@ -348,7 +394,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 	  	sandboxes[i].size = 0;
 	  	sandboxes[i].false_positive = FALSE_POSITIVE;
 
-	  	sandbox_scores[i] = 0;
+	  	sandbox_scores[i] /= 3;
 	  	// Each sandbox for a prefetcher max_size is different
 	  	// based on their degree
 	  	// +1 because of last cycle
@@ -383,18 +429,6 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
   	sandbox_period_count = 0;
 	}
 
-	//** Check for Hits in Sandboxnboxes
-	int i;
-	for (i=0; i<TOTAL_SANDBOX; i++) {
-		if (sandbox_test(&sandboxes[i], addr))
-				sandbox_scores[i]++;
-	}
-
-	//** Operate Sandboxes Prefetchers
-	l2_prefetcher_next_line(addr, &sandboxes[0], 1, cache_hit);
-	l2_prefetcher_ip_stride(addr, ip, &sandboxes[1], 1, cache_hit);
-	l2_prefetcher_stream(addr, &sandboxes[2], 1, cache_hit);
-	l2_prefetcher_ampm(addr, &sandboxes[3], 1, cache_hit);
 }
 
 // This function is called when a cache block is filled into the L2, and lets you konw which set and way of the cache the block occupies.
@@ -421,16 +455,15 @@ void l2_prefetcher_next_line(unsigned long long int addr, sandbox_t *sandbox, in
 	unsigned long long int pf_addr = ((addr>>6)+1)<<6;
   int i;
   for (i=0; i<NEXT_PREFETCH_DEGREE; i++) {
-  	if (!evaluation)
-    	l2_prefetch_line(0, addr, pf_addr, FILL_L2);
-    if (evaluation)
-    	if (!cache_hit)
-    		if (!sandbox_insert (sandbox, pf_addr)) {
+  	//if (!cache_hit) {
+			if (!sandbox_insert (sandbox, pf_addr)) {
 				printf("Error Next Line Insert - Sandbox Full\n");
 				exit(1);
 			}
-
-    pf_addr = ((pf_addr>>6)+1)<<6;
+	  	if (!evaluation)
+	    	l2_prefetch_line(0, addr, pf_addr, FILL_L2);  	
+	    pf_addr = ((pf_addr>>6)+1)<<6;
+	  //}
   }
 
 }
@@ -530,7 +563,7 @@ void l2_prefetcher_ip_stride(unsigned long long int addr, unsigned long long int
 				break;
 
 		  // check the MSHR occupancy to decide if we're going to prefetch to the L2 or LLC
-		  if (evaluation)
+		  //if (evaluation)
 			  if (!sandbox_insert (sandbox, pf_address)) {
 					printf("Error IP Stride Insert - Sandbox Full\n");
 					exit(1);
@@ -655,7 +688,7 @@ void l2_prefetcher_stream(unsigned long long int addr, sandbox_t *sandbox, int e
 		  unsigned long long int pf_address = (page<<12)+((detectors_stream[detector_index].pf_index)<<6);
 		  
 		  // check MSHR occupancy to decide whether to prefetch into the L2 or LLC
-		  if (evaluation)
+		  //if (evaluation)
 			  if (!sandbox_insert (sandbox, pf_address)) {
 						printf("Error IP Stride Insert - Sandbox Full\n");
 						exit(1);
@@ -775,7 +808,7 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
 		  // we found the stride repeated twice, so issue a prefetch
 		  unsigned long long int pf_address = (page<<12)+(pf_index<<6);
 
-		  if (evaluation)
+		  //if (evaluation)
 				if (!sandbox_insert (sandbox, pf_address)) {
 							printf("Error AMPM Insert - Sandbox Full\n");
 							exit(1);
@@ -819,7 +852,7 @@ void l2_prefetcher_ampm(unsigned long long int addr, sandbox_t *sandbox, int eva
     if((ampm_pages[page_index].access_map[check_index1]==1) && (ampm_pages[page_index].access_map[check_index2]==1)) {
 	  	unsigned long long int pf_address = (page<<12)+(pf_index<<6);
 
-	  	if (evaluation)
+	  	//if (evaluation)
 				if (!sandbox_insert (sandbox, pf_address)) {
 					printf("Error AMPM Insert - Sandbox Full\n");
 					exit(1);
