@@ -104,11 +104,49 @@ Figure \ref{pic:perf} shows the performance speedups for different policies. X a
   \label{pic:perf}
   \centering
     \includegraphics[width=1\textwidth]{perf.png}
-    \caption{Policies Speedup in IPC compared to No Prefetching}
+    \caption{Policies Speedup in IPC - Normalized to No Prefetching}
 \end{figure}
 
 \section{Sensitivity of Workloads to Prefetcher Aggressiveness}
+In this section we evaluate the sensitivity of each workload to the aggressiveness of prefetchers. Aggressiveness is defined as prefetching degree in the code. It means that how many prefetches will be done for a demand access. In following subsections we investigate this for different policies.
 
+\subsection{Next Line}
+
+\begin{figure}[!h]
+  \label{pic:next-agg}
+  \centering
+    \includegraphics[width=1\textwidth]{next_agg.png}
+    \caption{Next Line Policy Aggressiveness impact on Speedup - Normalized to degree one}
+\end{figure}
+
+\subsection{IP Stride}
+
+
+\begin{figure}[!h]
+  \label{pic:ip-agg}
+  \centering
+    \includegraphics[width=1\textwidth]{ip_agg.png}
+    \caption{IP Stride Policy Aggressiveness impact on Speedup - Normalized to degree one}
+\end{figure}
+
+\subsection{Stream}
+
+
+\begin{figure}[!h]
+  \label{pic:stream-agg}
+  \centering
+    \includegraphics[width=1\textwidth]{stream_agg.png}
+    \caption{Stream Policy Aggressiveness impact on Speedup - Normalized to degree one}
+\end{figure}
+
+\subsection{AMPM}
+
+\begin{figure}[!h]
+  \label{pic:ampm-agg}
+  \centering
+    \includegraphics[width=1\textwidth]{ampm_agg.png}
+    \caption{AMPM Policy Aggressiveness impact on Speedup - Normalized to degree one}
+\end{figure}
 
 \section{Online Prefetching Mechanism}
 

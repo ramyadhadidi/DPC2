@@ -35,8 +35,8 @@
 // Sandbox
 #define TOTAL_SANDBOX	4
 #define FALSE_POSITIVE 10 			// from 1000-11==1.1%
-#define SANDBOX_PERIOD 256			// Period in L2 Accesses
-#define SANDBOX_SIZE_EACH 256
+#define SANDBOX_PERIOD 128			// Period in L2 Accesses
+#define SANDBOX_SIZE_EACH 128
 
 // IP stride
 #define IP_TRACKER_COUNT 1024
