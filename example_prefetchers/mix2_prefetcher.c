@@ -174,13 +174,13 @@ typedef struct ampm_page
 
 // sandboxes
 sandbox_t sandboxes[TOTAL_SANDBOX];
-sandbox_t sandboxes_old[TOTAL_SANDBOX];
-int sandbox_scores[TOTAL_SANDBOX];
+int sandbox_hit[TOTAL_SANDBOX];
 int sandbox_period_count;
+int total_miss;
 int active_pref_num;
 
 int index_max = 0;
-int max_score = 0;
+int min_miss = 0;
 
 // IP stride
 ip_tracker_t trackers_ip[IP_TRACKER_COUNT];
@@ -220,7 +220,7 @@ void l2_prefetcher_initialize(int cpu_num)
   	sandboxes[i].size = 0;
   	sandboxes[i].false_positive = FALSE_POSITIVE;
 
-  	sandbox_scores[i] = 0;
+  	sandbox_hit[i] = 0;
   	// Each sandbox for a prefetcher max_size is different
   	// based on their degree
   	// +1 because of last cycle
@@ -253,6 +253,7 @@ void l2_prefetcher_initialize(int cpu_num)
 
 
   sandbox_period_count = 0;
+  total_miss = 0;
 
   // Choose the first prefetcher as active one
   active_pref_num = rand() % TOTAL_SANDBOX;
@@ -274,7 +275,6 @@ void l2_prefetcher_initialize(int cpu_num)
 // and is the entry point for participants' prefetching algorithms
 void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned long long int ip, int cache_hit)
 {
-	
 	//** Operate Avtive Prefetcher
 	switch (active_pref_num) {
 		// Next Line
@@ -301,11 +301,14 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 			exit(1);
 	}
 
-	//** Check for Hits in Sandboxnboxes
+	//**Calculate hits in each sandbox
 	int i;
-	for (i=0; i<TOTAL_SANDBOX; i++) {
-		if (sandbox_test(&sandboxes[i], addr))
-				sandbox_scores[i]++;
+	if (!cache_hit) {
+		total_miss++;
+		for (i=0; i<TOTAL_SANDBOX; i++) {
+			if (sandbox_test(&sandboxes[i], addr))
+					sandbox_hit[i]++;
+		}
 	}
 
 	//** Operate Sandboxes Prefetchers
@@ -345,6 +348,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		exit(1);
 	}
 
+
 	//** Increase Evaluation Period
 	// If period is done decide next active prefetcher - reset scores & sandboxes - reset period
 	sandbox_period_count++;
@@ -352,41 +356,23 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 		// decide next active prefetcher
 		int i;
 		
+		//printf("\ttotal miss = %d\n", total_miss);
 		for (i=0; i<TOTAL_SANDBOX; i++) {
-			//printf("\tscore %d = %d\n", i, sandbox_scores[i]);
-			//printf("\tsize %d = %d\n", i, sandboxes_old[i].size);
-			if (sandbox_scores[i] > max_score) {
+			printf("\thit %d = %d\n", i, sandbox_hit[i]);
+			//printf("\tmiss %d = %d\n", i, total_miss - sandbox_hit[i]);
+			//printf("\tsize %d = %d\n", i, sandboxes[i].size);
+
+
+			if (sandbox_hit[i] > min_miss) {
 				index_max = i;
-				max_score = sandbox_scores[i];
+				min_miss = sandbox_hit[i];
 			}
 		}
 
 		active_pref_num = index_max;
+		min_miss = 0;
 
-
-		//printf("\tactive prefetcher = %d\n", active_pref_num);
-
-		/*
-		for (i=0; i<TOTAL_SANDBOX; i++) {
-			printf("\tData %d\n:",i);
-			int j;
-			for (j=0; j<sandboxes[i].size; j++) 
-				printf("\t %d:",(int)sandboxes[i].data[j]);
-			printf("\n");
-		}		
-		printf("\n");
-		*/
-
-		// copy sandboxes to sandboxes_old
-		for (i=0; i<TOTAL_SANDBOX; i++) {
-			sandboxes_old[i].size = sandboxes[i].size;
-			sandboxes_old[i].false_positive = sandboxes[i].false_positive;
-			sandboxes_old[i].max_size = sandboxes[i].max_size;
-
-			int j;
-			for (j=0; j<sandboxes_old[i].size; j++) 
-				sandboxes_old[i].data[j] = sandboxes[i].data[j]; 
-		}
+		printf("\tactive prefetcher = %d\n", active_pref_num);
 
 
 		// reset scores & sandbox
@@ -394,7 +380,7 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 	  	sandboxes[i].size = 0;
 	  	sandboxes[i].false_positive = FALSE_POSITIVE;
 
-	  	sandbox_scores[i] /= 3;
+	  	sandbox_hit[i] = 0;
 	  	// Each sandbox for a prefetcher max_size is different
 	  	// based on their degree
 	  	// +1 because of last cycle
@@ -425,10 +411,10 @@ void l2_prefetcher_operate(int cpu_num, unsigned long long int addr, unsigned lo
 	  	}
   	}
 
-  	// reset period counter
+  	// reset period counter & miss counter
   	sandbox_period_count = 0;
+  	total_miss = 0;
 	}
-
 }
 
 // This function is called when a cache block is filled into the L2, and lets you konw which set and way of the cache the block occupies.
