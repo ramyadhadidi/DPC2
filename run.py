@@ -64,14 +64,15 @@ def main(argv):
     traces = os.listdir (trace_dir)
 
     #dpc options - currently nothing
-    dpc_options = ""    
+    dpc_options = ["-hide_heartbeat"]
+    dpc_options = " ".join(dpc_options)
 
     for dpc in args.exe[0]:
         for trace in traces:
             output_filename = "{}_{}_{}".format(dpc.split('_')[1], trace.split('_')[0], args.degree)
             command = ( 
                 "zcat " + os.path.join(trace_dir, trace) + " | " + 
-                os.path.join(current_dir, dpc) + dpc_options + " | tee " + 
+                os.path.join(current_dir, dpc) + " " + dpc_options + " | tee " + 
                 os.path.join (current_dir, args.outputDir ,output_filename)
                 )
             if args.dryRun:

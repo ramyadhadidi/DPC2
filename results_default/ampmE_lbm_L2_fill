@@ -1,0 +1,13 @@
+
+*** Data Prefetching Championship 2 Simulator ***
+
+Warmup Instructions: 10000000
+Simulation Instructions: 100000000
+Scramble loads OFF
+Using 1MB Last Level Cache
+Using 12.8 GB/s DRAM bandwidth
+AMPM Lite Prefetcher
+Knobs visible from prefetcher: 0 0 0
+
+Simulation complete. Instructions retired: 3099758 Cycles elapsed: 1836118 IPC: 1.688213
+
