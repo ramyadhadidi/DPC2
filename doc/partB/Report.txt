@@ -1,0 +1,31 @@
+Report PartB
+	Data Prefetching
+	Ramyad Hadidi
+	11 March 2015
+
+
+At the end of part A, my dynamic algorithm sounds somehow complex. I tried to reduce the complexity,
+however after a while I realized the main problem was with the principle of my implementation. This is
+because I only used one metric, which it was not even covering true performance a each prefetcher.
+Therefore, I gave up on improving performance with my method, parallel sandboxes.
+
+As a follow up, I read “Feedback Directed Prefetching” to improve my dynamic algorithm in order to get
+more performance. During the study, I understand that I can use the metrics in the paper to measure
+different aspects of the best included algorithm, AMPM.
+
+As a test, I measured hit/miss, usefulness, and pollution of AMPM for each workload. I have included 
+the figures and data in the directory. Based on these results, I tried different approaches to improve 
+AMPM implementation. In my view, AMPM is doing its job perfect of regular memory accesses. Therefore,
+it would be hard to design a new prefetcher for these type of data streams. That’s why I have put all
+of my efforts in improving AMPM. After a while, I could get around 1.007 speedup with just inserting all 
+prefetches into LLC. 
+
+Unfortunately, I did not have time during this week to extend this work into irregular memory accesses.
+I was able to read a paper in MICRO’46, Linearizing Irregular Memory Accesses for Improved Correlated 
+Prefetching, that implemented another prefetcher for irregular memory accesses. It uses AMPM for its
+regular memory accesses and ISB for irregular memory accesses together.
+
+I have just submitted improved AMPM version, and not AMPM+ISB version since it is incomplete and I am 
+not able to complete it.
+ 
+
